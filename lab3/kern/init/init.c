@@ -34,20 +34,6 @@ int kern_init(void) {
     clock_init();   // 初始化时钟中断
     intr_enable();  // 开启中断
 
-    /* ------------------- Challenge 3 验证代码开始 ------------------- */
-    cprintf("\n=== Challenge 3: Testing Exception Handling ===\n");
-
-    // 测试非法指令异常
-    cprintf("Testing illegal instruction exception...\n");
-    asm volatile(".word 0x00000000");   // 强制执行非法指令
-
-    // 测试断点异常
-    cprintf("Testing breakpoint exception...\n");
-    asm volatile("ebreak");             // 执行断点指令
-
-    cprintf("=== Challenge 3: Tests Finished ===\n\n");
-    /* ------------------- Challenge 3 验证代码结束 ------------------- */
-
     while (1)
         ;
 }
