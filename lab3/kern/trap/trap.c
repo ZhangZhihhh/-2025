@@ -77,7 +77,6 @@ void interrupt_handler(struct trapframe *tf) {
                 timer_prints++;
                 if (timer_prints >= MAX_PRINTS) {
                     sbi_shutdown();
-                    while (1); // 防止返回
                 }
             }
             break;
