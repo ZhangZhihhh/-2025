@@ -11,4 +11,3 @@ main(void) {
     cprintf("value is %d.\n", result);
     panic("FAIL: T.T\n");
 }
-

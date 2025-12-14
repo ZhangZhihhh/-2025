@@ -161,13 +161,13 @@ void exception_handler(struct trapframe *tf)
     {
     case CAUSE_MISALIGNED_FETCH:
         cprintf("Instruction address misaligned\n");
-        break;
+        goto killed;
     case CAUSE_FETCH_ACCESS:
         cprintf("Instruction access fault\n");
-        break;
+        goto killed;
     case CAUSE_ILLEGAL_INSTRUCTION:
         cprintf("Illegal instruction\n");
-        break;
+        goto killed;
     case CAUSE_BREAKPOINT:
         cprintf("Breakpoint\n");
         if (tf->gpr.a7 == 10)
@@ -179,16 +179,22 @@ void exception_handler(struct trapframe *tf)
         break;
     case CAUSE_MISALIGNED_LOAD:
         cprintf("Load address misaligned\n");
-        break;
+        goto killed;
     case CAUSE_LOAD_ACCESS:
         cprintf("Load access fault\n");
-        break;
+        if (trap_in_kernel(tf)) {
+            panic("Load access fault in kernel mode\n");
+        }
+        goto killed;
     case CAUSE_MISALIGNED_STORE:
-        panic("AMO address misaligned\n");
-        break;
+        cprintf("AMO address misaligned\n");
+        goto killed;
     case CAUSE_STORE_ACCESS:
         cprintf("Store/AMO access fault\n");
-        break;
+        if (trap_in_kernel(tf)) {
+            panic("Store/AMO access fault in kernel mode\n");
+        }
+        goto killed;
     case CAUSE_USER_ECALL:
         // cprintf("Environment call from U-mode\n");
         tf->epc += 4;
@@ -207,17 +213,28 @@ void exception_handler(struct trapframe *tf)
         break;
     case CAUSE_FETCH_PAGE_FAULT:
         cprintf("Instruction page fault\n");
-        break;
+        goto killed;
     case CAUSE_LOAD_PAGE_FAULT:
         cprintf("Load page fault\n");
-        break;
+        goto killed;
     case CAUSE_STORE_PAGE_FAULT:
         cprintf("Store/AMO page fault\n");
-        break;
+        goto killed;
     default:
         print_trapframe(tf);
         break;
     }
+    return;
+killed:
+    // 如果是用户态程序产生的异常，则杀死该进程
+    if (trap_in_kernel(tf)) {
+        panic("Exception in kernel mode\n");
+    }
+    cprintf("killed by kernel.\n");
+    if (current != NULL) {
+        do_exit(-E_KILLED);
+    }
+    panic("do_exit failed.\n");
 }
 
 static inline void trap_dispatch(struct trapframe *tf)
