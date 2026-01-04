@@ -259,15 +259,15 @@ void schedule(void)
    
 6. **`need_resched` 标志位的作用**
    - 它是“延后调度”的软中断标志，用于：
-     - 在中断 / 系统调用等不可立即切换环境下，先做必要工作，再安全地调用 [schedule](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html)。
+     - 在中断 / 系统调用等不可立即切换环境下，先做必要工作，再安全地调用 `schedule`。
      - 避免在任意位置随意切换，破坏内核关键路径的原子性。
-   - `proc_tick` 中只是标记 `need_resched`，真正的切换由 [schedule](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 在安全点触发。
+   - `proc_tick` 中只是标记 `need_resched`，真正的切换由 `schedule` 在安全点触发。
 
 #### 4.3 调度算法的切换机制
 
 要添加一个新的调度算法（如 Stride），需要做的工作：
 
-1. **实现一个新的 [sched_class](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 实例**
+1. **实现一个新的 `sched_class` 实例**
 
    - 定义一个结构体，如：
 
@@ -288,26 +288,26 @@ void schedule(void)
 
    - 在调度头文件中声明：`extern struct sched_class stride_sched_class;`
 
-3. **在 [sched_init()](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 中切换调度类**
+3. **在 `sched_init() `中切换调度类**
 
    - 将：`sched_class = &default_sched_class;`
 
      换成：`sched_class = &stride_sched_class;`
 
-   - 或增加一个编译 / 运行时配置来选择不同 [sched_class](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html)。
+   - 或增加一个编译 / 运行时配置来选择不同 `sched_class`。
 
 4. **其他框架代码无需修改**
 
-   - [wakeup_proc](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html)、[schedule](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html)、[sched_class_proc_tick](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 等逻辑完全不需要改动。
-   - 这正是这种设计易于切换调度算法的原因：算法差异通过 [sched_class](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 封装，对框架透明。
+   - `wakeup_proc`、`schedule`、`sched_class_proc_tick`等逻辑完全不需要改动。
+   - 这正是这种设计易于切换调度算法的原因：算法差异通过 `sched_class`封装，对框架透明。
 
 ------
 
 ## 练习 2：Round Robin 调度算法实现
 
-### 1. Lab5 vs Lab6 中一个函数的差异分析：[schedule()](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html)
+### 1. Lab5 vs Lab6 中一个函数的差异分析：`schedule()`
 
-以 [schedule()](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 为例，Lab5 与 Lab6 的实现有代表性的差异：
+以 `schedule()`为例，Lab5 与 Lab6 的实现有代表性的差异：
 
 - **Lab5 **：
 
@@ -329,24 +329,24 @@ void schedule(void)
     }
     ```
   
-  - [schedule](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 不关心底层是链表还是斜堆，也不关心是 RR 还是 Stride。
+  - `schedule` 不关心底层是链表还是斜堆，也不关心是 RR 还是 Stride。
   
-  - 这样设计的好处是：当引入 Stride 或其他算法时，不需要修改 [schedule](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html)，只要更换 [sched_class](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 即可。
+  - 这样设计的好处是：当引入 Stride 或其他算法时，不需要修改 `schedule`，只要更换 `sched_class` 即可。
 
 **如果不做这个改动会有什么问题？**
 
 - 若`schedule` 仍然直接使用链表操作：
 
   - 就无法支持需要优先队列、堆等复杂结构的算法。
-  - 每次增加新算法，都要修改 [schedule](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html)，框架与策略强耦合，可维护性极差。
+  - 每次增加新算法，都要修改 `schedule`，框架与策略强耦合，可维护性极差。
   
-- 当前改动使 [schedule](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 成为一个与算法无关的“统一调度入口”，提高了扩展性和可维护性。
+- 当前改动使 `schedule`成为一个与算法无关的“统一调度入口”，提高了扩展性和可维护性。
 
 ------
 
 ### 2. RR 各函数的实现思路
 
-RR 调度类 [default_sched_class](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 的关键函数实现如下。
+RR 调度类 `default_sched_class`的关键函数实现如下。
 
 #### 2.1 `RR_init`
 
@@ -359,7 +359,7 @@ static void RR_init(struct run_queue *rq) {
 
 - 使用空链表初始化运行队列。
 - `proc_num` 清零。
-- `max_time_slice` 在 [sched_init()](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 中设置，这里不处理。
+- `max_time_slice` 在 `sched_init()` 中设置，这里不处理。
 - 原因：
   - RR 只需要一个 FIFO 队列，双向循环链表足够。
 
@@ -380,8 +380,8 @@ static void RR_enqueue(struct run_queue *rq, struct proc_struct *proc) {
 - 关键点：
   - 通过 `assert(list_empty(...))` 保证进程不会重复在队列中。
   - 使用 `list_add_before(&rq->run_list, &proc->run_link)` 将新进程插入到表头前，即逻辑上的队尾，实现 FIFO。
-  - 重新分配时间片：如果 `time_slice` 为空或过大，设置为 [rq->max_time_slice](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html)。
-  - 更新 [proc->rq](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 指针和队列进程数。
+  - 重新分配时间片：如果 `time_slice` 为空或过大，设置为 `rq->max_time_slice`。
+  - 更新 `proc->rq`指针和队列进程数。
 - 边界情况：
   - 空队列插入：`run_list` 本身是哨兵节点，`list_add_before` 对空队列也适用。
   - 进程已在队列中：通过 `assert` 捕获逻辑错误。
@@ -414,7 +414,7 @@ static struct proc_struct *RR_pick_next(struct run_queue *rq) {
 
 - 取`run_list`的下一个节点作为队头：若等于哨兵节点，说明队列为空，返回 `NULL`。
 
-- [schedule()](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 在得到 `next` 后会调用 `sched_class_dequeue(next)` 将其出队。
+- `schedule()` 在得到 `next` 后会调用 `sched_class_dequeue(next)` 将其出队。
 
 #### 2.5 `RR_proc_tick`
 
@@ -435,6 +435,15 @@ static void RR_proc_tick(struct run_queue *rq, struct proc_struct *proc) {
 ------
 
 ### 3. `make grade` 与 QEMU 调度现象
+
+`make grade`的结果是：
+
+```
+priority:                (3.2s)
+  -check result:                             OK
+  -check output:                             OK
+Total Score: 50/50
+```
 
 在使用 RR 调度器（`sched_class = &default_sched_class`）时：
 
@@ -480,11 +489,11 @@ static void RR_proc_tick(struct run_queue *rq, struct proc_struct *proc) {
 - 设计目标：
   - 时间片应大于一次典型上下文切换开销，避免大量时间浪费在切换上。
   - 时间片应足够小，使交互式任务的响应时间在可接受范围内。
-- 在本实验中，[MAX_TIME_SLICE](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 设为 5，是权衡可见性与简洁性的选择。
+- 在本实验中，`MAX_TIME_SLICE`设为 5，是权衡可见性与简洁性的选择。
 
 #### 4.3 为什么 `RR_proc_tick` 中要设置 `need_resched`
 
-- `need_resched`是“软中断”式标志：通过 `RR_proc_tick` 中的时间片逻辑，将“应该调度”的信息记录下来。而具体的调度发生在 [schedule()](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html)，由内核在安全点（如中断返回、系统调用返回）调用。
+- `need_resched`是“软中断”式标志：通过 `RR_proc_tick` 中的时间片逻辑，将“应该调度”的信息记录下来。而具体的调度发生在 `schedule()`，由内核在安全点（如中断返回、系统调用返回）调用。
   
 - 如果不设置`need_resched`,即使时间片用尽，进程仍会继续执行，不会轮转到其他进程。这样RR 的公平性与响应性都会被破坏。
 
@@ -503,13 +512,13 @@ static void RR_proc_tick(struct run_queue *rq, struct proc_struct *proc) {
 2. **当前实现是否支持多核调度？**
 
    - 当前实现实际上是单核模型：
-     - 全局只有一个 [run_queue](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 和一个 [sched_class](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html)。
-     - [current](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html)、[idleproc](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 等都是单 CPU 语义。
+     - 全局只有一个 `run_queue`和一个 `sched_class`。
+     - `current`、`idleproc`等都是单 CPU 语义。
    - 如果要支持多核（SMP），需要：
-     - 为每个 CPU 维护一个 [run_queue](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 和一个 [current](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html)。
+     - 为每个 CPU 维护一个 `run_queue`和一个 `current`。
      - 需要加锁保护运行队列（如自旋锁）。
      - 增加负载均衡接口（`load_balance`、`get_proc` 等），在空闲 CPU 上“偷”任务。
-   - [sched_class](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 结构中已经为多核预留了一些接口注释，从设计上是可扩展的。
+   - `sched_class` 结构中已经为多核预留了一些接口注释，从设计上是可扩展的。
 
 ------
 
@@ -544,7 +553,7 @@ static void RR_proc_tick(struct run_queue *rq, struct proc_struct *proc) {
 
 - `enqueue`
   
-  - 根据进程当前所在优先级（ [proc->mlfq_level](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html)），插入对应级别的 `run_list` 队尾。
+  - 根据进程当前所在优先级（ `proc->mlfq_level`），插入对应级别的 `run_list` 队尾。
 
 - `pick_next`
   
@@ -573,7 +582,7 @@ Stride 调度算法中，每个进程 `i` 有：
 
 调度器总是选择当前 `stride` 最小的进程运行。
 
-实验中 [priority](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 程序的输出也验证了这一点：
+实验中 `priority` 程序的输出也验证了这一点：
 `sched result: 1 1 2 2 3`，高优先级进程明显获得更多时间片。
 
 ### 3. Stride 实现过程简述
@@ -589,12 +598,12 @@ Challenge 中实现的 Stride 调度器主要步骤：
    - `proc_struct`中已有：
    - `uint32_t lab6_stride;`
      - `uint32_t lab6_priority;`
-   - [skew_heap_entry_t lab6_run_pool;](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html)
+   - `skew_heap_entry_t lab6_run_pool;`
 
 3. **使用斜堆作为运行队列的优先队列**
 
-   - [run_queue.lab6_run_pool](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 为斜堆根。
-   - 利用 [skew_heap_insert](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) / [skew_heap_remove](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 操作完成 O(log n) 的插入和删除。
+   - `run_queue.lab6_run_pool` 为斜堆根。
+   - 利用 `skew_heap_insert` / `skew_heap_remove`操作完成 O(log n) 的插入和删除。
 
 4. **核心函数**
 
@@ -602,10 +611,10 @@ Challenge 中实现的 Stride 调度器主要步骤：
 
    - `stride_enqueue`
      - 将进程插入 `lab6_run_pool` 斜堆。
-     - 设置时间片与 [rq](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 指针，增加 `proc_num`。
+     - 设置时间片与 `rq`指针，增加 `proc_num`。
 
    - `stride_dequeue`
-     - 用 [skew_heap_remove](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 从斜堆移除该进程。
+     - 用 `skew_heap_remove` 从斜堆移除该进程。
      
    - `stride_pick_next`
      - 从 `lab6_run_pool` 根节点获取 stride 最小的进程。
@@ -616,13 +625,13 @@ Challenge 中实现的 Stride 调度器主要步骤：
 
 5. **切换调度器**
 
-   - 在 [sched_init()](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 中将 [sched_class](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 改为 [&stride_sched_class](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 即可生效。
+   - 在 `sched_init()`中将 `sched_class` 改为 `&stride_sched_class` 即可生效。
 
 ------
 
 ## 总结
 
 - 通过本次实验，我深入理解了 uCore 调度器框架的设计思想：
-  - 使用 [sched_class](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 进行策略抽象，将框架与算法解耦。
-  - [run_queue](vscode-file://vscode-app/d:/Microsoft VS Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) 同时支持链表与斜堆，为不同复杂度的调度算法提供基础结构。
+  - 使用 `sched_class`进行策略抽象，将框架与算法解耦。
+  - `run_queue`同时支持链表与斜堆，为不同复杂度的调度算法提供基础结构。
 - 在此次实验的框架下，我不仅实现了基础的 Round Robin 调度算法，理解了时间片轮转、公平性和 `need_resched` 机制，还实现了 Stride 调度算法，并通过实验验证了“时间片分配与优先级成正比”的性质。
